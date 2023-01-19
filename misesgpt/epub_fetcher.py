@@ -93,6 +93,10 @@ class MisesEPUBookCatalog(MisesAbstractBookCatalog):
     urls = self.get_epub_urls()
     for i in tqdm(range(len(urls))):
       url = urls[i]
+      if "Spanish" in url:
+        continue
+      if "Chinese" in url:
+        continue
       bname = url.replace(self.download_base_url+'/','').split('.epub')[0]
       if bname in self.books_json:
         continue
@@ -101,7 +105,6 @@ class MisesEPUBookCatalog(MisesAbstractBookCatalog):
       for item in list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT)):
         if self.in_filters(item.get_name()):
           continue
-        #print(item.get_name())
         pl = self.paragraph_list(item)
         if len(pl)>0:
           if not "table of content" in pl[0].lower():
