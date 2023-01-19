@@ -12,22 +12,22 @@ from misesgpt.epub_fetcher import MisesEPUBookCatalog
 from torch.utils.data import Dataset
 
 class MisesDataset(Dataset):
-  def __init__(self, tokenizer, max_length, cache_tokenization=False):
+  def __init__(self, tokenizer, max_length):
     assert(tokenizer is not None)
 
     self.tokenizer = tokenizer
     self.sentences = []
     self.max_length = max_length
-    self.cache_tokenization = cache_tokenization
 
     self.html_books = MisesHTMLBookCatalog()
     self.epub_books = MisesEPUBookCatalog()
     self.get_paragraphs()
 
   def process_paragraph(self, p):
-    pen = self.tokenizer(p, add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
-    if len(pen)+2 < self.max_length:
-      self.sentences.append('<|startoftext|>' + p + '<|endoftext|>')
+    s = '<|startoftext|>' + p + '<|endoftext|>'
+    pen = self.tokenizer(s, add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
+    if len(pen) < self.max_length:
+      self.sentences.append(pen)
     return True
 
   def get_paragraphs(self):
@@ -47,12 +47,6 @@ class MisesDataset(Dataset):
           pbar.update(1)
 
   def __getitem__(self, item):
-    if not self.cache_tokenization:
-      return self.tokenizer(self.sentences[item], add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
-
-    if isinstance(self.sentences[item], str):
-      self.sentences[item] = self.tokenizer(self.sentences[item], add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
-
     return self.sentences[item]
 
   def __len__(self):
