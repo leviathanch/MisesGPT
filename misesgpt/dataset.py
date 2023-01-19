@@ -1,3 +1,8 @@
+'''
+ Copyright (c) 2023-2026 David Lanzendörfer <leviathan@libresilicon.com>
+ Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+'''
+
 from tqdm.auto import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
