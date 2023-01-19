@@ -1,0 +1,5 @@
+html_dir
+epub_dir
+mises_html_books.json
+mises_ebup_books.json
+misesgpt/__pycache__
