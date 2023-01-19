@@ -9,7 +9,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from misesgpt.html_fetcher import MisesHTMLBookCatalog
 from misesgpt.epub_fetcher import MisesEPUBookCatalog
 
-class MisesDataset:
+from torch.utils.data import Dataset
+
+class MisesDataset(Dataset):
   def __init__(self, tokenizer, max_length, cache_tokenization=False):
     assert(tokenizer is not None)
 
