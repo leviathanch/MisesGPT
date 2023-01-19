@@ -9,5 +9,5 @@ from misesgpt.epub_fetcher import MisesEPUBookCatalog
 bc = MisesHTMLBookCatalog()
 bc.update()
 
-#bc = MisesEPUBookCatalog()
-#bc.update()
+bc = MisesEPUBookCatalog()
+bc.update()
