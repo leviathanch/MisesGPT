@@ -4,7 +4,7 @@
 '''
 
 from transformers import (
-    GPT2Model,
+    GPT2LMHeadModel,
     GPT2Tokenizer,
     Trainer,
     TrainingArguments,
@@ -12,19 +12,22 @@ from transformers import (
 
 tokenizer = GPT2Tokenizer.from_pretrained(
   'gpt2',
+  return_special_tokens_mask = True,
+  bos_token = '<|startoftext|>',
+  eos_token = '<|endoftext|>',
+  pad_token = '<|pad|>'
 )
 
-model = GPT2Model.from_pretrained('./base_model')
+model = GPT2LMHeadModel.from_pretrained('./base_model')
 model.eval()
 
 test_strings = [
-  "Taxation is ",
-  "War is ",
+    "Taxation is",
+    "War is",
 ]
 
 for text in test_strings:
-  x = tokenizer.encode(text, return_tensors = 'pt')
-  y = model.generate(x, max_length=50, pad_token = '<|pad|>')
-  for beam in y:
-    beamd = tokenizer.decode(beam, skip_special_tokens = True, max_new_tokens = 50)
-    print(beamd)
+  x = tokenizer(text, return_tensors = 'pt', padding=True )
+  y = model.generate(**x, do_sample=True, temperature=0.9, max_length=150)
+  y = tokenizer.decode(y[0], skip_special_tokens = True)
+  print('\n\n'+y+'\n\n')
