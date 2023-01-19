@@ -36,6 +36,7 @@ class MisesDataset:
     for book in self.epub_books.books_json:
       paragraphs += self.epub_books.books_json[book]
 
+    print("Filling samples array")
     with tqdm(total=len(paragraphs)) as pbar:
       with ThreadPoolExecutor() as ex:
         futures = [ex.submit(self.process_paragraph, p) for p in paragraphs]
