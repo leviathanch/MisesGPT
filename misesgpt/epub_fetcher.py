@@ -76,11 +76,10 @@ class MisesEPUBookCatalog(MisesAbstractBookCatalog):
     soup = BeautifulSoup(chapter.get_body_content(), 'html.parser')
     ps = soup.find_all('p')
     for p in ps:
-      pc = p.get_text()
-      pc = pc.replace('\u00a0','')
-      pc = pc.replace('\r\n','')
-      if len(pc)>0:
-        ret.append(pc)
+      pc = p.get_text().replace('\u00a0','').replace('\r','')
+      for spc in pc.split('\n'):
+        if len(spc)>0:
+          ret.append(spc)
     return ret
 
   def in_filters(self, name):
