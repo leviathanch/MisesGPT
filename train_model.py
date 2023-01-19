@@ -25,6 +25,7 @@ max_length = 1024
 
 tokenizer = GPT2Tokenizer.from_pretrained(
   'gpt2',
+  return_special_tokens_mask = True,
   bos_token = '<|startoftext|>',
   eos_token = '<|endoftext|>',
   pad_token = '<|pad|>'
@@ -36,7 +37,8 @@ train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - t
 
 config = GPT2Config(n_layer=6, n_head=6, n_embd=192)
 if exists('./base_model'):
-  GPT2LMHeadModel.from_pretrained('./base_model')
+  model = GPT2LMHeadModel.from_pretrained('./base_model')
+  model.eval()
 else:
   model = GPT2LMHeadModel(config)
   model.resize_token_embeddings(len(tokenizer))
@@ -48,16 +50,10 @@ training_args =TrainingArguments(
   save_steps = 500,
 )
 
-print("Set up collator")
-
 data_collator = DataCollatorForLanguageModeling(
   tokenizer = tokenizer,
   mlm = False,
-  #mlm = True,
-  #mlm_probability = 0.15,
 )
-
-print("Run training")
 
 trainer = Trainer(
   model = model,
