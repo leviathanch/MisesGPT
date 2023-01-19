@@ -47,7 +47,7 @@ training_args =TrainingArguments(
   output_dir = './model',
   num_train_epochs = 10,
   warmup_steps = 500,
-  save_steps = 500,
+  save_steps = 10000,
 )
 
 data_collator = DataCollatorForLanguageModeling(
