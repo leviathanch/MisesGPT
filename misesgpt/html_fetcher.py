@@ -58,7 +58,7 @@ class MisesHTMLBookCatalog(MisesAbstractBookCatalog):
 
   def fetch_html_books(self, url):
     ret=[]
-    req = self.request(self.base_url+url, 'html')
+    req = self.request(self.base_url+url, 'html', refresh=True)
     soup = BeautifulSoup(req, 'html.parser')
     books = soup.find_all("div", {"class": "book-formats"})
     for book in books:

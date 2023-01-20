@@ -28,10 +28,10 @@ class MisesAbstractBookCatalog:
     if not exists(self.cache_dir):
       mkdir(self.cache_dir)
 
-  def request(self, url, suffix):
+  def request(self, url, suffix, refresh=False):
     ret = ''
     fn = join(self.cache_dir, hashlib.sha256(url.encode()).hexdigest() + '.' + suffix)
-    if exists(fn):
+    if exists(fn) and not refresh:
       with open(fn,'rb') as f:
         ret = f.read()
         f.close()
