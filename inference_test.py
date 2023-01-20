@@ -6,8 +6,6 @@
 from transformers import (
     GPT2LMHeadModel,
     GPT2Tokenizer,
-    Trainer,
-    TrainingArguments,
   )
 
 tokenizer = GPT2Tokenizer.from_pretrained(
@@ -22,12 +20,11 @@ model = GPT2LMHeadModel.from_pretrained('./base_model')
 model.eval()
 
 test_strings = [
-    "Taxation is",
-    "War is",
+    "Taxation is theft because",
 ]
 
 for text in test_strings:
   x = tokenizer(text, return_tensors = 'pt', padding=True )
-  y = model.generate(**x, do_sample=True, temperature=0.9, max_length=150)
-  y = tokenizer.decode(y[0], skip_special_tokens = True)
-  print('\n\n'+y+'\n\n')
+  y = model.generate(**x, do_sample=True, temperature=0.9, max_length=1024, num_beams=5)
+  y = tokenizer.batch_decode(y, skip_special_tokens = True)
+  print(y[0])
