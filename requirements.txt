@@ -2,3 +2,4 @@ transformers
 torch
 ebooklib
 evaluate
+bs4
