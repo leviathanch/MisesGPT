@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from misesgpt.html_fetcher import MisesHTMLBookCatalog
 from misesgpt.epub_fetcher import MisesEPUBookCatalog
+from misesgpt.basic_words import MisesBasicWords
 
 from torch.utils.data import Dataset
 
@@ -29,6 +30,9 @@ class MisesDataset(Dataset):
     if not exists(self.cache_folder):
       mkdir(self.cache_folder)
 
+    print("Reading basic vocabulary...")
+    word_definitions = MisesBasicWords()
+    self.get_paragraphs(word_definitions.words)
     print("Reading HTML books...")
     html_books = MisesHTMLBookCatalog()
     self.get_paragraphs(html_books.books_json)
@@ -55,7 +59,7 @@ class MisesDataset(Dataset):
           f.close()
         continue
 
-      print("Processing book", book, '(',i,'/',len(books_json),')')
+      print("Processing entry", book, '(',i,'of',len(books_json),')')
       self.book_sentences = []
       with tqdm(total=len(books_json[book])) as pbar:
         with ThreadPoolExecutor() as ex:
