@@ -3,3 +3,4 @@ torch
 ebooklib
 evaluate
 bs4
+SentencePiece
