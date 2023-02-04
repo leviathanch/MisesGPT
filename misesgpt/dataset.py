@@ -24,9 +24,10 @@ class MisesDataset(Dataset):
     self.get_paragraphs()
 
   def process_paragraph(self, p):
-    s = '<|startoftext|>' + p + '<|endoftext|>'
-    pen = self.tokenizer(s, add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
-    if len(pen) < self.max_length:
+    tokens = self.tokenizer.encode('<|startoftext|>' + p + '<|endoftext|>', add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True, padding=True)
+    if len(tokens) <= self.max_length:
+      s = '<|startoftext|>' + p + '<|endoftext|>' + (self.max_length-len(pen.input_ids))*'<|pad|>'
+      pen = self.tokenizer(s, add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True, padding=True)
       self.sentences.append(pen)
     return True
 
