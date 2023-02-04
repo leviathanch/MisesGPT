@@ -99,7 +99,7 @@ class MisesDataset(Dataset):
       self.items += self.book_items
 
     with open(pickle_file,'wb') as f:
-      pickle.dump( word_items, f)
+      pickle.dump( self.book_items, f)
       f.close()
 
   def get_paragraphs(self, books_json):
