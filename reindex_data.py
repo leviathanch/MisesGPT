@@ -4,14 +4,14 @@
 '''
 
 from transformers import (
-    ReformerTokenizer,
+    ReformerTokenizerFast,
   )
 
 from misesgpt.dataset import MisesDataset
 
 max_length = 4096
 
-tokenizer = ReformerTokenizer.from_pretrained(
+tokenizer = ReformerTokenizerFast.from_pretrained(
   'model',
   return_special_tokens_mask = True,
   bos_token = '<s>',
