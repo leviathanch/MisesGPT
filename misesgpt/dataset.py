@@ -22,14 +22,15 @@ from torch.utils.data import Dataset
 class MisesDataset(Dataset):
   cache_folder = 'mises_dataset_cache'
   book_sentences = None
+  book_items = None
 
   def __init__(self, tokenizer, max_length, only_build_cache=False, cached_only=False):
     assert(tokenizer is not None)
     self.only_build_cache = only_build_cache
     self.tokenizer = tokenizer
-    self.sentences = []
     self.max_length = max_length
-
+    self.items = []
+    
     if not exists(self.cache_folder):
       mkdir(self.cache_folder)
 
@@ -55,40 +56,50 @@ class MisesDataset(Dataset):
 
   def pickle_loading_threat(self, pickle_file):
     with open(pickle_file,'rb') as f:
-      self.sentences += pickle.load(f)
+      self.items += pickle.load(f)
       f.close()
 
   def process_paragraph(self, p):
-    tokens = self.tokenizer.encode('<s>' + p + '</s>', add_special_tokens=True, padding=True)
-    if len(tokens) <= self.max_length:
-      s = '<s>' + p + '</s>' + (self.max_length-len(tokens))*'<pad>'
-      pen = self.tokenizer(s, add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True, padding=True)
-      self.book_sentences.append(pen)
+    s = '<s>' + p + '</s>\n'
+    new_tokens = self.tokenizer.encode(s, add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
+    if len(new_tokens)+self.book_fragments['length'] <= self.max_length:
+      self.book_fragments['text'] += s
+      self.book_fragments['length'] += len(new_tokens)
+    else:
+      text_tokens = self.tokenizer.encode(self.book_fragments['text'], add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
+      self.book_fragments['text'] += '<pad>'*(self.max_length-len(text_tokens))
+      pen = self.tokenizer(self.book_fragments['text'], add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True)
+      self.book_items.append(pen)
+
     return True
 
-  def get_basic_words(self, words):
+  def get_basic_words(self, word_dict):
     pickle_file = join(self.cache_folder,'words.pickle')
     if exists(pickle_file):
       if not self.only_build_cache:
         with open(pickle_file,'rb') as f:
-          self.sentences += pickle.load(f)
+          self.items += pickle.load(f)
           f.close()
       return True
+    words = []
+    for word in word_dict:
+      words += word_dict[word]
 
-    for i, word in enumerate(words):
-      print("Processing word", word, '(',i,'of',len(words),')')
-      self.book_sentences = []
-      with tqdm(total=len(words[word])) as pbar:
-        with ThreadPoolExecutor() as ex:
-          futures = [ex.submit(self.process_paragraph, p) for p in words[word]]
-          for future in as_completed(futures):
-            result = future.result()
-            pbar.update(1)
-      if not self.only_build_cache:
-        self.sentences += self.book_sentences
+    print("Processing words...")
+    self.book_fragments = { 'length':0, 'text':""}
+    self.book_items = []
+    with tqdm(total=len(words)) as pbar:
+      with ThreadPoolExecutor() as ex:
+        futures = [ex.submit(self.process_paragraph, p) for p in words]
+        for future in as_completed(futures):
+          result = future.result()
+          pbar.update(1)
+
+    if not self.only_build_cache:
+      self.items += self.book_items
 
     with open(pickle_file,'wb') as f:
-      pickle.dump( self.book_sentences, f)
+      pickle.dump( word_items, f)
       f.close()
 
   def get_paragraphs(self, books_json):
@@ -98,12 +109,13 @@ class MisesDataset(Dataset):
       if exists(pickle_file):
         if not self.only_build_cache:
           with open(pickle_file,'rb') as f:
-            self.sentences += pickle.load(f)
+            self.items += pickle.load(f)
             f.close()
         continue
 
       print("Processing entry", book, '(',i,'of',len(books_json),')')
-      self.book_sentences = []
+      self.book_fragments = { 'length':0, 'text':""}
+      self.book_items = []
       with tqdm(total=len(books_json[book])) as pbar:
         with ThreadPoolExecutor() as ex:
           futures = [ex.submit(self.process_paragraph, p) for p in books_json[book]]
@@ -112,13 +124,13 @@ class MisesDataset(Dataset):
             pbar.update(1)
 
       if not self.only_build_cache:
-        self.sentences += self.book_sentences
+        self.items += self.book_items
       with open(pickle_file,'wb') as f:
-        pickle.dump( self.book_sentences, f)
+        pickle.dump( self.book_items, f)
         f.close()
 
   def __getitem__(self, item):
-    return self.sentences[item]
+    return self.items[item]
 
   def __len__(self):
-    return len(self.sentences)
+    return len(self.items)
