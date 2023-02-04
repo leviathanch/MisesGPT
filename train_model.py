@@ -32,7 +32,7 @@ tokenizer = ReformerTokenizer.from_pretrained(
   unk_token = '<unk>',
   mask_token = '<mask>',
 )
-dataset = MisesDataset(tokenizer, max_length)
+dataset = MisesDataset(tokenizer, max_length, cached_only=True)
 
 train_size = int(0.9 * len(dataset))
 train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - train_size])
