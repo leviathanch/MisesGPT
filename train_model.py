@@ -26,11 +26,11 @@ max_length = 4096
 tokenizer = ReformerTokenizer.from_pretrained(
   'model',
   return_special_tokens_mask = True,
-  bos_token = '<|startoftext|>',
-  eos_token = '<|endoftext|>',
-  pad_token = '<|pad|>',
-  unk_token = '<|unk|>',
-  mask_token = '<|mask|>',
+  bos_token = '<s>',
+  eos_token = '</s>',
+  pad_token = '<pad>',
+  unk_token = '<unk>',
+  mask_token = '<mask>',
 )
 dataset = MisesDataset(tokenizer, max_length)
 
