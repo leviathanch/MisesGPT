@@ -32,7 +32,7 @@ class MisesDataset(Dataset):
 
     print("Reading basic vocabulary...")
     word_definitions = MisesBasicWords()
-    self.get_paragraphs(word_definitions.words)
+    self.get_basic_words(word_definitions.words)
     print("Reading HTML books...")
     html_books = MisesHTMLBookCatalog()
     self.get_paragraphs(html_books.books_json)
@@ -48,6 +48,29 @@ class MisesDataset(Dataset):
       pen = self.tokenizer(s, add_special_tokens=True, truncation=True, max_length=self.max_length, return_special_tokens_mask=True, padding=True)
       self.book_sentences.append(pen)
     return True
+
+  def get_basic_words(self, words):
+    pickle_file = join(self.cache_folder,'words.pickle')
+    if exists(pickle_file):
+      with open(pickle_file,'rb') as f:
+        self.sentences += pickle.load(f)
+        f.close()
+      return True
+
+    for i, word in enumerate(words):
+      print("Processing word", word, '(',i,'of',len(words),')')
+      self.book_sentences = []
+      with tqdm(total=len(words[word])) as pbar:
+        with ThreadPoolExecutor() as ex:
+          futures = [ex.submit(self.process_paragraph, p) for p in words[word]]
+          for future in as_completed(futures):
+            result = future.result()
+            pbar.update(1)
+      self.sentences += self.book_sentences
+
+    with open(pickle_file,'wb') as f:
+      pickle.dump( self.book_sentences, f)
+      f.close()
 
   def get_paragraphs(self, books_json):
     paragraphs = []
