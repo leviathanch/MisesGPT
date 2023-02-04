@@ -20,4 +20,4 @@ tokenizer = ReformerTokenizer.from_pretrained(
   unk_token = '<unk>',
   mask_token = '<mask>',
 )
-dataset = MisesDataset(tokenizer, max_length)
+dataset = MisesDataset(tokenizer, max_length, only_build_cache=True)

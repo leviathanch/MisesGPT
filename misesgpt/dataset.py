@@ -21,8 +21,9 @@ class MisesDataset(Dataset):
   cache_folder = 'mises_dataset_cache'
   book_sentences = None
 
-  def __init__(self, tokenizer, max_length):
+  def __init__(self, tokenizer, max_length, only_build_cache=False):
     assert(tokenizer is not None)
+    self.only_build_cache = only_build_cache
     self.tokenizer = tokenizer
     self.sentences = []
     self.max_length = max_length
@@ -39,7 +40,6 @@ class MisesDataset(Dataset):
     print("Reading EPUBS...")
     epub_books = MisesEPUBookCatalog()
     self.get_paragraphs(epub_books.books_json)
-    print("Writing dataset cache",self.cache_file)
 
   def process_paragraph(self, p):
     tokens = self.tokenizer.encode('<s>' + p + '</s>', add_special_tokens=True, padding=True)
@@ -52,9 +52,10 @@ class MisesDataset(Dataset):
   def get_basic_words(self, words):
     pickle_file = join(self.cache_folder,'words.pickle')
     if exists(pickle_file):
-      with open(pickle_file,'rb') as f:
-        self.sentences += pickle.load(f)
-        f.close()
+      if not self.only_build_cache:
+        with open(pickle_file,'rb') as f:
+          self.sentences += pickle.load(f)
+          f.close()
       return True
 
     for i, word in enumerate(words):
@@ -66,7 +67,8 @@ class MisesDataset(Dataset):
           for future in as_completed(futures):
             result = future.result()
             pbar.update(1)
-      self.sentences += self.book_sentences
+      if not self.only_build_cache:
+        self.sentences += self.book_sentences
 
     with open(pickle_file,'wb') as f:
       pickle.dump( self.book_sentences, f)
@@ -77,9 +79,10 @@ class MisesDataset(Dataset):
     for i, book in enumerate(books_json):
       pickle_file = join(self.cache_folder,hashlib.sha256(book.encode()).hexdigest()+'.pickle')
       if exists(pickle_file):
-        with open(pickle_file,'rb') as f:
-          self.sentences += pickle.load(f)
-          f.close()
+        if not self.only_build_cache:
+          with open(pickle_file,'rb') as f:
+            self.sentences += pickle.load(f)
+            f.close()
         continue
 
       print("Processing entry", book, '(',i,'of',len(books_json),')')
@@ -90,7 +93,9 @@ class MisesDataset(Dataset):
           for future in as_completed(futures):
             result = future.result()
             pbar.update(1)
-      self.sentences += self.book_sentences
+
+      if not self.only_build_cache:
+        self.sentences += self.book_sentences
       with open(pickle_file,'wb') as f:
         pickle.dump( self.book_sentences, f)
         f.close()
