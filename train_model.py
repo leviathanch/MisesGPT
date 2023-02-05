@@ -12,18 +12,21 @@ from math import ceil, log
 from transformers import (
     ReformerConfig,
     ReformerModelWithLMHead,
-    ReformerTokenizer,
+    ReformerTokenizerFast,
     DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
+    utils,
   )
 
 from torch.utils.data import random_split
 from misesgpt.dataset import MisesDataset
 
+utils.logging.set_verbosity_error()  # Suppress standard warnings
+
 max_length = 4096
 
-tokenizer = ReformerTokenizer.from_pretrained(
+tokenizer = ReformerTokenizerFast.from_pretrained(
   'model',
   return_special_tokens_mask = True,
   bos_token = '<s>',
