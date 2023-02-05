@@ -116,7 +116,7 @@ class MisesDataset(Dataset):
             f.close()
         continue
 
-      print("Processing entry", book, '(',i,'of',len(books_json),')')
+      print("Processing entry", book, '(',i+1,'of',len(books_json),')')
       self.book_fragment = { 'length':0, 'text':""}
       self.book_frags = []
       with tqdm(total=len(books_json[book])) as pbar:
