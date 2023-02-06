@@ -89,8 +89,8 @@ training_args = {
     "logging_steps": 50,
     "warmup_steps": warmup,
     "weight_decay": 0.001,
-    "per_gpu_train_batch_size": 1,
-    "per_gpu_eval_batch_size": 1,
+    "per_device_train_batch_size": 1,
+    "per_device_eval_batch_size": 1,
     "save_steps": 50,
     "output_dir": "./model"
 }
