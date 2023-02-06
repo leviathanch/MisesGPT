@@ -41,7 +41,7 @@ dataset = MisesDataset(tokenizer, max_length, cached_only=True)
 train_size = int(0.9 * len(dataset))
 train_dataset, val_dataset = random_split(dataset, [train_size, len(dataset) - train_size])
 
-if exists('./model/config.json') and False:
+if exists('./model/config.json'):
   print("Found existing model. Loading...")
   model = ReformerModelWithLMHead.from_pretrained('./model')
   model.eval()
