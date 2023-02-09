@@ -4,27 +4,26 @@
 '''
 
 from transformers import (
-    GPT2LMHeadModel,
-    GPT2Tokenizer,
+	ReformerForMaskedLM,
+    ReformerModelWithLMHead,
+    ReformerTokenizerFast,
   )
 
-tokenizer = GPT2Tokenizer.from_pretrained(
-  'gpt2',
+tokenizer = ReformerTokenizerFast.from_pretrained(
+  'model',
   return_special_tokens_mask = True,
-  bos_token = '<|startoftext|>',
-  eos_token = '<|endoftext|>',
-  pad_token = '<|pad|>'
 )
 
-model = GPT2LMHeadModel.from_pretrained('./base_model')
+model = ReformerModelWithLMHead.from_pretrained('model')
 model.eval()
 
 test_strings = [
-    "Taxation is theft because",
+    "No less has this been true of economics.",
 ]
 
 for text in test_strings:
   x = tokenizer(text, return_tensors = 'pt', padding=True )
-  y = model.generate(**x, do_sample=True, temperature=0.9, max_length=1024, num_beams=5)
-  y = tokenizer.batch_decode(y, skip_special_tokens = True)
-  print(y[0])
+  y = model.generate(**x, do_sample=True)# max_length=1024)
+  y = tokenizer.batch_decode(y, skip_special_tokens = True )
+  for yi in y:
+      print('\nMisesGPT:',yi)
