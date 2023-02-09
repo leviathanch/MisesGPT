@@ -10,14 +10,14 @@ from os import remove
 from math import ceil, log
 
 from transformers import (
-    ReformerConfig,
-	ReformerModelWithLMHead,
-    ReformerTokenizerFast,
-    DataCollatorForLanguageModeling,
-    Trainer,
-    TrainingArguments,
-    utils,
-  )
+  ReformerConfig,
+  ReformerModelWithLMHead,
+  ReformerTokenizerFast,
+  DataCollatorForLanguageModeling,
+  Trainer,
+  TrainingArguments,
+  utils,
+)
 
 from torch.utils.data import random_split
 from torch.nn import DataParallel
@@ -52,20 +52,17 @@ else:
     "attn_layers": ["local", "lsh", "local", "lsh", "local", "lsh"],
     "axial_pos_embds": True,
     "sinusoidal_pos_embds": False,
-    #"axial_pos_embds_dim": [64, 192],
-    #"axial_pos_shape": [512, 1024],
     "axial_pos_shape": [64, 64],
     "lsh_attn_chunk_length": 64,
     "local_attn_chunk_length": 64,
     "feed_forward_size": 512,
     "hidden_act": "relu",
-    "hidden_size": 256,
     "is_decoder": True,
     "max_position_embeddings": 524288,
     "num_attention_heads": 2,
     "num_buckets": [64, 128],
     "num_hashes": 1,
-    "vocab_size": 320,
+    "vocab_size": 52000,
     "lsh_attention_probs_dropout_prob": 0.0,
     "lsh_num_chunks_before": 1,
     "lsh_num_chunks_after": 0,
@@ -78,21 +75,20 @@ else:
   model = ReformerModelWithLMHead(config)
   model.resize_token_embeddings(len(tokenizer))
   model.train()
-  warmup = 500
-
+  warmup = 50
 
 training_args = {
-    "learning_rate": 1e-3,
-    "max_steps": 2000,
-    "do_train": True,
-    "gradient_accumulation_steps": 8,
-    "logging_steps": 50,
-    "warmup_steps": warmup,
-    "weight_decay": 0.001,
-    "per_device_train_batch_size": 1,
-    "per_device_eval_batch_size": 1,
-    "save_steps": 50,
-    "output_dir": "./model"
+  "learning_rate": 1e-3,
+  "max_steps": 200000,
+  "do_train": True,
+  "gradient_accumulation_steps": 8,
+  "logging_steps": 50,
+  "warmup_steps": warmup,
+  "weight_decay": 0.001,
+  "per_device_train_batch_size": 1,
+  "per_device_eval_batch_size": 1,
+  "save_steps": 5000,
+  "output_dir": "./model"
 }
 training_args = TrainingArguments(**training_args)
 
@@ -101,6 +97,14 @@ data_collator = DataCollatorForLanguageModeling(
   mlm = True,
 )
 
+def compute_metrics(pred):
+  non_padded_indices = (pred.label_ids != -100)
+  # correctly shift labels and pred as it's done in forward()
+  labels = pred.label_ids[..., 1:][non_padded_indices[..., 1:]]
+  pred = np.argmax(pred.predictions[:, :-1], axis=-1)[non_padded_indices[..., :-1]]
+  acc = np.mean(np.asarray(pred == labels), dtype=np.float)
+  return {"accuracy": acc}
+
 net = DataParallel(model)
 trainer = Trainer(
   model = net,
@@ -108,6 +112,8 @@ trainer = Trainer(
   data_collator = data_collator,
   train_dataset = train_dataset,
   eval_dataset = val_dataset,
+  prediction_loss_only=True,
+  compute_metrics=compute_metrics,
 )
 
 trainer.train()
