@@ -112,7 +112,6 @@ trainer = Trainer(
   data_collator = data_collator,
   train_dataset = train_dataset,
   eval_dataset = val_dataset,
-  prediction_loss_only=True,
   compute_metrics=compute_metrics,
 )
 
