@@ -9,7 +9,7 @@ from transformers import (
 
 from misesgpt.dataset import MisesDataset
 
-max_length = 4096
+max_length =  64*64 # "axial_pos_shape": [64, 64]
 
 tokenizer = ReformerTokenizerFast.from_pretrained(
   'model',
