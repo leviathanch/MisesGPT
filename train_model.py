@@ -23,12 +23,14 @@ from transformers import (
   Trainer,
   TrainingArguments,
 )
+from transformers.optimization import get_linear_schedule_with_warmup
 
 from torch import nn
 from transformers.trainer_pt_utils import get_parameter_names
 
 from accelerate import Accelerator
 
+from torch.optim import AdamW
 from torch.utils.data import random_split
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
@@ -57,46 +59,13 @@ tokenizer = ReformerTokenizerFast(
   mask_token = '<mask>',
 )
 
-def get_optimizer(model, args):
-  default_args = {
-      "output_dir": "tmp",
-      "evaluation_strategy": "steps",
-      "num_train_epochs": 1,
-      "log_level": "error",
-      "report_to": "none",
-  }
-  training_args = TrainingArguments(per_device_train_batch_size=args.batch_size, **default_args)
-  decay_parameters = get_parameter_names(model, [nn.LayerNorm])
-  decay_parameters = [name for name in decay_parameters if "bias" not in name]
-  optimizer_grouped_parameters = [
-      {
-          "params": [p for n, p in model.named_parameters() if n in decay_parameters],
-          "weight_decay": training_args.weight_decay,
-      },
-      {
-          "params": [p for n, p in model.named_parameters() if n not in decay_parameters],
-          "weight_decay": 0.0,
-      },
-  ]
-
-  optimizer_kwargs = {
-      "betas": (training_args.adam_beta1, training_args.adam_beta2),
-      "eps": training_args.adam_epsilon,
-  }
-  optimizer_kwargs["lr"] = training_args.learning_rate
-  adam_bnb_optim = bnb.optim.Adam8bit(
-      optimizer_grouped_parameters,
-      betas=(training_args.adam_beta1, training_args.adam_beta2),
-      eps=training_args.adam_epsilon,
-      lr=training_args.learning_rate,
-  )
-  return adam_bnb_optim
-
 def get_data(args):
   dataset = MisesDataset(tokenizer, max_length, cached_only=True)
   data_collator = DataCollatorForLanguageModeling(
     tokenizer = tokenizer,
     mlm = True,
+    pad_to_multiple_of = 64*64,
+    return_tensors = 'pt'
   )
   loader = DataLoader(dataset, collate_fn=data_collator, batch_size=args.batch_size)
   return loader
@@ -172,32 +141,40 @@ def train_cuda(gpu, args):
   model = DistributedDataParallel(args.model.cuda(), device_ids=[gpu])
   model = model.train().to('cuda')
 
-  optimizer = get_optimizer(model, args)
   total_step = len(train_loader)
+  optimizer = AdamW(model.module.reformer.parameters())
+  scheduler =  get_linear_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=args.warmup_steps,
+    num_training_steps=total_step
+  )
+  accelerator = Accelerator(gradient_accumulation_steps=args.gradient_accumulation_steps)
   
   for epoch in range(args.epochs):
     for i, item in enumerate(train_loader):
-      x = item.to('cuda')
-      loss = model(**x).loss
-      # Backward and optimize
-      optimizer.zero_grad()
-      loss.backward()
-      optimizer.step()
-      if (i + 1) % 100 == 0 and gpu == 0:
-        print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(
-          epoch + 1, 
-          args.epochs,
-          i + 1, 
-          total_step,
-          loss.item())
-        )
-        with train_summary_writer.as_default():
-          tf.summary.scalar('loss', loss.item(), step=i+1)
+      with accelerator.accumulate(model):
+        x = item.to('cuda')
+        loss = model(**x).loss
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
 
-      if (i + 1) % args.save_steps == 0 and gpu == 0:
-        output_dir = join(args.output_dir, 'checkpoint-{}'.format(epoch*total_step+i+1))
-        print('Savin checkpoint',output_dir)
-        model.module.save_pretrained(output_dir)
+        if (i + 1) % args.log_steps == 0 and gpu == 0:
+          print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(
+            epoch + 1, 
+            args.epochs,
+            i + 1, 
+            total_step,
+            loss.item())
+          )
+          with train_summary_writer.as_default():
+            tf.summary.scalar('loss', loss.item(), step=i+1)
+
+        if (i + 1) % args.save_steps == 0 and gpu == 0:
+          output_dir = join(args.output_dir, 'checkpoint-{}'.format(epoch*total_step+i+1))
+          print('Savin checkpoint',output_dir)
+          model.module.save_pretrained(output_dir)
 
 def main():
   parser = argparse.ArgumentParser()
@@ -210,13 +187,15 @@ def main():
   parser.add_argument('--output-dir', default='./out', type=str, help='Output directory')
   parser.add_argument('--epochs', default=2, type=int, metavar='N', help='number of total epochs to run')
   parser.add_argument('--save-steps', default=100, type=int, help='Save every N steps')
+  parser.add_argument('--warmup-steps', default=50, type=int, help='Warmup steps')
+  parser.add_argument('--log-steps', default=100, type=int, help='Log every N steps')
   args = parser.parse_args()
   args.world_size = args.cores*args.nodes
   args.train_loader = get_data(args)
   args.model = get_model()
 
   if args.use_cuda:
-    mp.spawn(train_cuda, nprocs=args.cores, args=(args,), join=True)
+    mp.spawn(train_cuda, nprocs=args.cores, args=(args,))
   elif args.use_tpus: # TODO: support TPUs
     pass
 
