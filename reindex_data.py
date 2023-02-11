@@ -12,6 +12,8 @@ from misesgpt.dataset import MisesDataset
 tokenizer = ReformerTokenizerFast(
   vocab_file = 'model/remilamda.model',
   return_special_tokens_mask = True,
+  add_special_tokens=True,
+  padding = True,
   bos_token = '<s>',
   eos_token = '</s>',
   pad_token = '<pad>',
