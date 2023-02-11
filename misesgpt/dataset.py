@@ -23,6 +23,7 @@ class MisesDataset(Dataset):
   cache_folder = 'mises_dataset_cache'
   items = []
   book_frags = None
+  skipped_paragraphs = 0
 
   def __init__(self, tokenizer, sequence_length, only_build_cache=False, cached_only=False):
     assert(tokenizer is not None)
@@ -69,8 +70,12 @@ class MisesDataset(Dataset):
       # reset
       self.book_fragment['text'] = ""
       self.book_fragment['length'] = 0
-    self.book_fragment['text'] += s
-    self.book_fragment['length'] += len(new_tokens)
+
+    if len(new_tokens) < self.sequence_length:
+      self.book_fragment['text'] += s
+      self.book_fragment['length'] += len(new_tokens)
+    else:
+      self.skipped_paragraphs += 1
 
   def get_basic_words(self, word_dict):
     pickle_file = join(self.cache_folder,'words.pickle')
@@ -134,6 +139,8 @@ class MisesDataset(Dataset):
       with open(pickle_file,'wb') as f:
         pickle.dump( self.book_frags, f)
         f.close()
+
+    print("Skipped",self.skipped_paragraphs,"paragraphs because they were too long")
 
   def __getitem__(self, item):
     return self.tokenizer(
