@@ -23,4 +23,17 @@ with open(datafile,'w') as f:
     f.write('<s>' + p + '</s>\n')
   f.close()
 
-sp.SentencePieceTrainer.train(input=datafile,model_prefix='model/remilamda',vocab_size=52_000)
+uds = '<mask>'
+for i in range(10):
+  uds += ',<speaker'+str(i)+'>'
+
+sp.SentencePieceTrainer.train(
+  input=datafile,
+  model_prefix='model/remilamda',
+  vocab_size=52_000,
+  bos_id=0,
+  pad_id=1,
+  eos_id=2,
+  unk_id=3,
+  user_defined_symbols=uds,
+)
