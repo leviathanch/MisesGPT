@@ -45,8 +45,8 @@ train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 
 max_length = 64*64
 
-tokenizer = ReformerTokenizerFast.from_pretrained(
-  'model',
+tokenizer = ReformerTokenizerFast(
+  vocab_file = 'model/remilamda.model',
   return_special_tokens_mask = True,
   add_special_tokens=True,
   padding = True,
