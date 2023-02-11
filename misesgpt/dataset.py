@@ -24,11 +24,11 @@ class MisesDataset(Dataset):
   items = []
   book_frags = None
 
-  def __init__(self, tokenizer, max_length, only_build_cache=False, cached_only=False):
+  def __init__(self, tokenizer, sequence_length, only_build_cache=False, cached_only=False):
     assert(tokenizer is not None)
     self.only_build_cache = only_build_cache
     self.tokenizer = tokenizer
-    self.max_length = max_length
+    self.sequence_length = sequence_length
 
     if not exists(self.cache_folder):
       mkdir(self.cache_folder)
@@ -61,19 +61,16 @@ class MisesDataset(Dataset):
   def process_paragraph(self, p):
     s = '<s>' + p + '</s>'
     new_tokens = self.tokenizer.encode(s, add_special_tokens=True, return_special_tokens_mask=True)
-    if len(new_tokens)+self.book_fragment['length'] > self.max_length:
+    if len(new_tokens)+self.book_fragment['length'] > self.sequence_length:
       # add padding
-      padding = (self.max_length-self.book_fragment['length'])*'<pad>'
-      self.book_fragment['text'] += padding
+      if self.book_fragment['length'] < self.sequence_length:
+        self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
       self.book_frags.append(self.book_fragment['text'])
       # reset
       self.book_fragment['text'] = ""
       self.book_fragment['length'] = 0
-
     self.book_fragment['text'] += s
     self.book_fragment['length'] += len(new_tokens)
-
-    return True
 
   def get_basic_words(self, word_dict):
     pickle_file = join(self.cache_folder,'words.pickle')
@@ -97,6 +94,9 @@ class MisesDataset(Dataset):
         for future in as_completed(futures):
           result = future.result()
           pbar.update(1)
+
+    self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
+    self.book_frags.append(self.book_fragment['text'])
 
     if not self.only_build_cache:
       self.items += self.book_frags
@@ -125,6 +125,9 @@ class MisesDataset(Dataset):
           for future in as_completed(futures):
             result = future.result()
             pbar.update(1)
+
+      self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
+      self.book_frags.append(self.book_fragment['text'])
 
       if not self.only_build_cache:
         self.items += self.book_frags
