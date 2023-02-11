@@ -9,10 +9,8 @@ from transformers import (
 
 from misesgpt.dataset import MisesDataset
 
-max_length =  32*32 # "axial_pos_shape": [32, 32]
-
-tokenizer = ReformerTokenizerFast.from_pretrained(
-  'model',
+tokenizer = ReformerTokenizerFast(
+  vocab_file = 'model/remilamda.model',
   return_special_tokens_mask = True,
   bos_token = '<s>',
   eos_token = '</s>',
@@ -20,4 +18,4 @@ tokenizer = ReformerTokenizerFast.from_pretrained(
   unk_token = '<unk>',
   mask_token = '<mask>',
 )
-dataset = MisesDataset(tokenizer, max_length, only_build_cache=True)
+dataset = MisesDataset(tokenizer, sequence_length=64*64, only_build_cache=True)
