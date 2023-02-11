@@ -61,7 +61,7 @@ class MisesDataset(Dataset):
 
   def process_paragraph(self, p):
     s = '<s>' + p + '</s>'
-    new_tokens = self.tokenizer.encode(s, add_special_tokens=True, return_special_tokens_mask=True)
+    new_tokens = self.tokenizer.encode(s)
     if len(new_tokens)+self.book_fragment['length'] > self.sequence_length:
       # add padding
       if self.book_fragment['length'] < self.sequence_length:
@@ -131,8 +131,11 @@ class MisesDataset(Dataset):
             result = future.result()
             pbar.update(1)
 
-      self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
-      self.book_frags.append(self.book_fragment['text'])
+      if self.book_fragment['length'] < 64:
+        print("Skipping. Too short")
+      else:
+        self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
+        self.book_frags.append(self.book_fragment['text'])
 
       if not self.only_build_cache:
         self.items += self.book_frags
@@ -143,11 +146,7 @@ class MisesDataset(Dataset):
     print("Skipped",self.skipped_paragraphs,"paragraphs because they were too long")
 
   def __getitem__(self, item):
-    return self.tokenizer(
-      self.items[item],
-      add_special_tokens=True,
-      return_special_tokens_mask=True
-    )
+    return self.tokenizer(self.items[item])
 
   def __len__(self):
     return len(self.items)
