@@ -23,13 +23,13 @@ class MisesDataset(Dataset):
   cache_folder = 'mises_dataset_cache'
   items = []
   book_frags = None
-  skipped_paragraphs = 0
 
-  def __init__(self, tokenizer, sequence_length, only_build_cache=False, cached_only=False):
+  def __init__(self, tokenizer, sequence_length, chunk_length, only_build_cache=False, cached_only=False):
     assert(tokenizer is not None)
     self.only_build_cache = only_build_cache
     self.tokenizer = tokenizer
     self.sequence_length = sequence_length
+    self.chunk_length = chunk_length
 
     if not exists(self.cache_folder):
       mkdir(self.cache_folder)
@@ -60,22 +60,18 @@ class MisesDataset(Dataset):
       f.close()
 
   def process_paragraph(self, p):
-    s = '<s>' + p + '</s>'
+    s = '<s>'+p+'</s>'
     new_tokens = self.tokenizer.encode(s)
-    if len(new_tokens)+self.book_fragment['length'] > self.sequence_length:
-      # add padding
-      if self.book_fragment['length'] < self.sequence_length:
-        self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
-      self.book_frags.append(self.book_fragment['text'])
-      # reset
-      self.book_fragment['text'] = ""
-      self.book_fragment['length'] = 0
 
     if len(new_tokens) < self.sequence_length:
       self.book_fragment['text'] += s
       self.book_fragment['length'] += len(new_tokens)
-    else:
-      self.skipped_paragraphs += 1
+
+    #if self.book_fragment['length'] > self.chunk_length:
+    self.book_frags.append(self.book_fragment['text'])
+    # reset
+    self.book_fragment['text'] = ""
+    self.book_fragment['length'] = 0
 
   def get_basic_words(self, word_dict):
     pickle_file = join(self.cache_folder,'words.pickle')
@@ -100,12 +96,8 @@ class MisesDataset(Dataset):
           result = future.result()
           pbar.update(1)
 
-    self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
-    self.book_frags.append(self.book_fragment['text'])
-
     if not self.only_build_cache:
       self.items += self.book_frags
-
     with open(pickle_file,'wb') as f:
       pickle.dump( self.book_frags, f)
       f.close()
@@ -131,22 +123,20 @@ class MisesDataset(Dataset):
             result = future.result()
             pbar.update(1)
 
-      if self.book_fragment['length'] < 64:
-        print("Skipping. Too short")
-      else:
-        self.book_fragment['text'] += (self.sequence_length-self.book_fragment['length'])*'<pad>'
-        self.book_frags.append(self.book_fragment['text'])
-
       if not self.only_build_cache:
         self.items += self.book_frags
       with open(pickle_file,'wb') as f:
         pickle.dump( self.book_frags, f)
         f.close()
 
-    print("Skipped",self.skipped_paragraphs,"paragraphs because they were too long")
-
   def __getitem__(self, item):
-    return self.tokenizer(self.items[item])
+    return self.tokenizer(
+      self.items[item],
+      max_length = self.sequence_length,
+      padding = 'max_length',
+      return_special_tokens_mask = True,
+      add_special_tokens=True,
+    )
 
   def __len__(self):
     return len(self.items)
