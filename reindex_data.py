@@ -9,15 +9,5 @@ from transformers import (
 
 from misesgpt.dataset import MisesDataset
 
-tokenizer = ReformerTokenizerFast(
-  vocab_file = 'model/remilamda.model',
-  return_special_tokens_mask = True,
-  add_special_tokens=True,
-  padding = True,
-  bos_token = '<s>',
-  eos_token = '</s>',
-  pad_token = '<pad>',
-  unk_token = '<unk>',
-  mask_token = '<mask>',
-)
-dataset = MisesDataset(tokenizer, sequence_length=64*64, only_build_cache=True)
+tokenizer = ReformerTokenizerFast.from_pretrained('remitokenizer')
+dataset = MisesDataset(tokenizer, sequence_length=2048, chunk_length=64, only_build_cache=True)
