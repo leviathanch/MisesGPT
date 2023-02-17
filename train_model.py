@@ -5,7 +5,6 @@
 from transformers import utils
 utils.logging.set_verbosity_error()  # Suppress standard warnings
 
-import bitsandbytes as bnb
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from os.path import exists
 from os import mkdir
