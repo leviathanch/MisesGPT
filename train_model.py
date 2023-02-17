@@ -118,7 +118,7 @@ def main():
   parser.add_argument('-bs', '--batch-size', default=1, type=int, help='size of a batch')
   parser.add_argument('-n', '--nodes', default=1, type=int, metavar='N')
   parser.add_argument('-c', '--cores', default=1, type=int, help='number of cores per node')
-  parser.add_argument('-nr', '--nr', default=0, type=int, help='ranking within the nodes')
+  parser.add_argument('-r', '--ranking', default=0, type=int, help='ranking within the nodes')
   parser.add_argument('--output-dir', default='./out', type=str, help='Output directory')
   parser.add_argument('--max-steps', default=2000, type=int, metavar='N', help='Maximums steps')
   parser.add_argument('--save-steps', default=100, type=int, help='Save every N steps')
