@@ -15,21 +15,6 @@ class MisesHTMLBookCatalog(MisesAbstractBookCatalog):
   def __init__(self, json_file='./mises_html_books.json', cache_dir='./html_dir'):
     MisesAbstractBookCatalog.__init__(self, json_file=json_file, cache_dir=cache_dir)
 
-  def fetch_table_of_content(self, url):
-    ret=[]
-    req = self.request(url, 'html')
-    soup = BeautifulSoup(req, 'html.parser')
-    divs = soup.find_all("div", {"class": "view-grouping-content"})
-    for div in divs:
-      groups = div.find_all("div", {"class": "view-grouping"})
-      for group in groups:
-        for a in self.extract_links(group):
-          if 'footnote' in a['href']:
-            continue
-          if a.text not in ['Bibliography', 'Index']:
-            ret.append(a['href'])
-    return ret
-
   def fetch_book_page(self, url, depth):
     ret=[]
     req = self.request(url, 'html')
@@ -39,13 +24,21 @@ class MisesHTMLBookCatalog(MisesAbstractBookCatalog):
       for a in content.find_all("a"):
         a.decompose()
       for p in content.find_all("p"):
-        for sp in p.text.replace('\t','').split('\n'):
-          if len(sp) > 0:
-            ret.append(sp)
+        sp = p.text.replace('\t','').replace('\n','')
+        if len(sp) > 0 and not sp.isspace():
+          ret.append(sp)
     elif depth > 0:
       children = soup.find_all("div", {"class": "children"})
       for child in children:
         for a in self.extract_links(child):
+          if a.text.lower() in ['bibliography', 'index', 'preface', 'acknowledgements']:
+            continue
+          if 'appendix' in a.text.lower():
+            continue
+          if 'content' in a.text.lower():
+            continue
+          if 'copyright' in a.text.lower():
+            continue
           ret += self.fetch_book_page(self.base_url+a['href'], depth-1)
     return ret
 
