@@ -70,14 +70,6 @@ def get_model(tokenizer):
 
   return model
 
-def compute_metrics(pred):
-  non_padded_indices = (pred.label_ids != -100)
-  # correctly shift labels and pred as it's done in forward()
-  labels = pred.label_ids[..., 1:][non_padded_indices[..., 1:]]
-  pred = np.argmax(pred.predictions[:, :-1], axis=-1)[non_padded_indices[..., :-1]]
-  acc = np.mean(np.asarray(pred == labels), dtype=np.float)
-  return {"accuracy": acc}
-
 def train_cuda(args):
   os.environ["WANDB_DISABLED"] = "true"
   os.environ["WORLD_SIZE"] = str(args.world_size)
@@ -114,11 +106,8 @@ def train_cuda(args):
   trainer = Trainer(
     model = DistributedDataParallel(args.model.cuda(), device_ids=[gpu]) if args.distributed else args.model,
     args = training_args,
-    #compute_metrics = compute_metrics,
     data_collator = args.data_collator,
-    #train_dataset = train_dataset,
 	train_dataset = args.dataset,
-	#eval_dataset = args.dataset,
     eval_dataset = val_dataset,
   )
   trainer.train()
