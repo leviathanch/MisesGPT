@@ -104,7 +104,7 @@ def train_cuda(args):
 
   training_args = TrainingArguments(**training_args)
   trainer = Trainer(
-    model = DistributedDataParallel(args.model.cuda(), device_ids=[gpu]) if args.distributed else args.model,
+    model = DistributedDataParallel(args.model.cuda().to('cuda:'+str(gpu)), device_ids=[gpu]) if args.distributed else args.model,
     args = training_args,
     data_collator = args.data_collator,
 	train_dataset = args.dataset,
