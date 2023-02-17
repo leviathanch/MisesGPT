@@ -5,7 +5,6 @@
 from transformers import utils
 utils.logging.set_verbosity_error()  # Suppress standard warnings
 
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from os.path import exists
 from os import mkdir
 from os import remove
@@ -30,9 +29,6 @@ from transformers.optimization import get_linear_schedule_with_warmup
 from torch import nn
 from transformers.trainer_pt_utils import get_parameter_names
 
-from accelerate import Accelerator
-
-from torch.optim import AdamW
 from torch.utils.data import random_split
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
@@ -106,7 +102,6 @@ def train_cuda(args):
   if args.gradient_accumulation_steps is not None:
     training_args["gradient_accumulation_steps"] = args.gradient_accumulation_steps
 
-  print(args.distributed)
   if args.distributed:
     set_device(gpu)
     training_args["local_rank"] = args.nr*args.cores+gpu
@@ -147,10 +142,6 @@ def main():
   parser.add_argument('--learning-rate', default=1e-3, type=float, help='Learning rate')
   parser.add_argument('--weight-decay', type=float, help='Weight decay')
   parser.add_argument('--seed', type=int, help='Seed')
-
-  #config = tf.compat.v1.ConfigProto()
-  #config.gpu_options.allow_growth = True
-  #sess = tf.compat.v1.Session(config=config)
 
   args = parser.parse_args()
   args.world_size = args.cores*args.nodes
