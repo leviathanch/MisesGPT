@@ -96,8 +96,8 @@ def train_cuda(args):
 
   if args.distributed:
     set_device(gpu)
-    training_args["local_rank"] = args.nr*args.cores+gpu
-    os.environ["RANK"] = str(args.nr*args.cores+gpu)
+    training_args["local_rank"] = args.rank*args.cores+gpu
+    os.environ["RANK"] = str(args.rank*args.cores+gpu)
 
   train_size = int(0.9 * len(args.dataset))
   train_dataset, val_dataset = random_split(args.dataset, [train_size, len(args.dataset) - train_size])
