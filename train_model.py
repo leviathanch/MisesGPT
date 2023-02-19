@@ -75,7 +75,6 @@ def train_cuda(args):
   os.environ["WORLD_SIZE"] = str(args.world_size)
   os.environ["MASTER_ADDR"] = str(args.master_address)
   os.environ["MASTER_PORT"] = str(args.master_port)
-  gpu = args.use_core
 
   training_args = {
       "max_steps": args.max_steps,
@@ -95,16 +94,17 @@ def train_cuda(args):
     training_args["gradient_accumulation_steps"] = args.gradient_accumulation_steps
 
   if args.distributed:
-    set_device(gpu)
-    training_args["local_rank"] = args.ranking*args.cores+gpu
-    os.environ["RANK"] = str(args.ranking*args.cores+gpu)
+    set_device(args.local_rank)
+    training_args["local_rank"] = args.local_rank
+    training_args["sharded_ddp"] = "zero_dp_3"
+    os.environ["RANK"] = str(args.global_rank*args.cores+args.local_rank)
 
   train_size = int(0.9 * len(args.dataset))
   train_dataset, val_dataset = random_split(args.dataset, [train_size, len(args.dataset) - train_size])
 
   training_args = TrainingArguments(**training_args)
   trainer = Trainer(
-    model = DistributedDataParallel(args.model.cuda().to('cuda:'+str(gpu)), device_ids=[gpu]) if args.distributed else args.model,
+    model = DistributedDataParallel(args.model.cuda().to('cuda:'+str(args.local_rank)), device_ids=[args.local_rank]) if args.distributed else args.model,
     args = training_args,
     data_collator = args.data_collator,
 	train_dataset = args.dataset,
@@ -114,18 +114,19 @@ def train_cuda(args):
 
 def main():
   parser = argparse.ArgumentParser()
+  parser.add_argument('--mlm', action='store_true', help='Enable masked language learning')
   parser.add_argument('--distributed', action='store_true', help='Turn on distributed mode')
   parser.add_argument('-bs', '--batch-size', default=1, type=int, help='size of a batch')
-  parser.add_argument('-n', '--nodes', default=1, type=int, metavar='N')
-  parser.add_argument('-c', '--cores', default=1, type=int, help='number of cores per node')
-  parser.add_argument('-r', '--ranking', default=0, type=int, help='ranking within the nodes')
+  parser.add_argument('-n', '--nodes', default=1, type=int, help='How many nodes are there')
+  parser.add_argument('-c', '--cores', default=1, type=int, help='How many cores are available')
+  parser.add_argument('-r', '--local-rank', default=0, type=int, help='Local rank: What core to use on the machine')
+  parser.add_argument('-R', '--global-rank', default=0, type=int, help='Global rank: Is it node zero?')
   parser.add_argument('--output-dir', default='./out', type=str, help='Output directory')
   parser.add_argument('--max-steps', default=2000, type=int, metavar='N', help='Maximums steps')
   parser.add_argument('--save-steps', default=100, type=int, help='Save every N steps')
   parser.add_argument('--warmup-steps', default=50, type=int, help='Warmup steps')
   parser.add_argument('--log-steps', default=100, type=int, help='Log every N steps')
   parser.add_argument('--gradient-accumulation-steps', type=int, help='Gradient accumulation steps')
-  parser.add_argument('--use-core', default=0, type=int, help='The core to spin up on')
   parser.add_argument('--master-address', default="127.0.0.1", type=str, help='The master address')
   parser.add_argument('--master-port', default="8888", type=str, help='The master port')
   parser.add_argument('--learning-rate', default=1e-3, type=float, help='Learning rate')
@@ -139,13 +140,19 @@ def main():
     set_seed(args.seed)
   args.model = get_model(tokenizer)
   args.dataset = MisesDataset(tokenizer, max_length, 64, cached_only=True)
-  args.data_collator = DataCollatorForLanguageModeling(
-    tokenizer = tokenizer,
-    #mlm = False,
-    mlm = True,
-    mlm_probability = 0.15,
-    return_tensors = 'pt',
-  )
+  if args.mlm:
+    args.data_collator = DataCollatorForLanguageModeling(
+      tokenizer = tokenizer,
+      mlm = True,
+      mlm_probability = 0.15,
+      return_tensors = 'pt',
+    )
+  else:
+    args.data_collator = DataCollatorForLanguageModeling(
+      tokenizer = tokenizer,
+      mlm = False,
+    )
+
   train_cuda(args)
 
 if __name__ == '__main__':
