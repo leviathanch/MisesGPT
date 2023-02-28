@@ -7,3 +7,6 @@ For training conversational skills, the Ubuntu Dialog Corpus is being used:
 http://dataset.cs.mcgill.ca/ubuntu-corpus-1.0
 
     wget http://dataset.cs.mcgill.ca/ubuntu-corpus-1.0/ubuntu_dialogs.tgz
+
+## Portuguese
+https://opencor.gitlab.io/corpora/martins20parallel/

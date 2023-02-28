@@ -4,3 +4,4 @@ ebooklib
 evaluate
 bs4
 SentencePiece
+fairscale
